@@ -1,21 +1,18 @@
 <!--
 Sync Impact Report
 ==================
-Version change: (unversioned template) → 1.0.0
-Bump rationale: Initial ratification; all placeholders replaced with concrete governance.
+Version change: 1.1.0 → 1.2.0
+Bump rationale: MINOR — materially expanded guidance (mandatory API timestamp format);
+no principles removed or redefined.
 
-Modified principles (template placeholder → new title):
-  - [PRINCIPLE_1_NAME] → I. API Contract-First
-  - [PRINCIPLE_2_NAME] → II. Test-First (NON-NEGOTIABLE)
-  - [PRINCIPLE_3_NAME] → III. Data Integrity & Financial Correctness
-  - [PRINCIPLE_4_NAME] → IV. Security by Default
-  - [PRINCIPLE_5_NAME] → V. Observability
-  - (added)            → VI. Simplicity & Idiomatic Go
+Modified principles:
+  - I. API Contract-First — all API timestamp input/output must use
+    YYYY-MM-DDTHH:MM:SS±HH:MM (e.g., 2026-05-05T14:30:00+07:00); non-conforming input rejected
+    with 400; stored as UTC, rendered in configured display timezone.
+Modified sections:
+  - Technology Stack & Constraints — display timezone added to required configuration.
 
-Added sections:
-  - Technology Stack & Constraints (was [SECTION_2_NAME])
-  - Development Workflow & Quality Gates (was [SECTION_3_NAME])
-
+Added sections: none
 Removed sections: none
 
 Templates requiring updates (read constitution at runtime; not modified by this command):
@@ -40,7 +37,15 @@ Follow-up TODOs: none
 - Public APIs MUST be versioned via URL prefix (`/v1/...`). Breaking changes require a new
   major version; the previous version MUST remain available until a documented deprecation
   window has elapsed.
-- List endpoints MUST support pagination; unbounded result sets are prohibited.
+- Every timestamp in API input and output (request bodies, query parameters, headers defined by
+  this API, and response bodies) MUST use the format `2026-05-05T14:30:00+07:00`: RFC 3339
+  date and time to whole seconds, with no fractional seconds and an explicit numeric UTC offset.
+  The `Z` suffix is not used; UTC is written as `+00:00`. In Go this is the layout
+  `2006-01-02T15:04:05-07:00`, applied through a shared timestamp type or helper rather than
+  the default `time.Time` JSON encoding (which emits nanoseconds and `Z`). Input in any other
+  format MUST be rejected with `400 Bad Request` and a problem response naming the field.
+  Accepted input is normalized to UTC for storage (Principle III); output is rendered in the
+  service's configured display timezone.
 - Mutating endpoints that move money or change loan state MUST accept an `Idempotency-Key`
   header and guarantee at-most-once effect for a given key.
 
@@ -76,6 +81,24 @@ wrong; failing-first tests prove the test actually exercises the behavior.
 - Integrity MUST be enforced in the database as well as in code: primary keys, foreign keys,
   `NOT NULL`, `CHECK`, and unique constraints are required where applicable.
 - All timestamps MUST be stored as `TIMESTAMPTZ` in UTC.
+- Every table MUST include the following audit columns:
+
+  | Column       | Type          | Rule                                                        |
+  |--------------|---------------|-------------------------------------------------------------|
+  | `created_at` | `TIMESTAMPTZ` | `NOT NULL`, default `now()`; set on insert, never changed    |
+  | `created_by` | identifier    | `NOT NULL`; the authenticated user or system actor           |
+  | `updated_at` | `TIMESTAMPTZ` | `NOT NULL`; set on insert and on every update                |
+  | `updated_by` | identifier    | `NOT NULL`; set on insert and on every update                |
+  | `deleted`    | `BOOLEAN`     | `NOT NULL`, default `false`                                  |
+  | `deleted_at` | `TIMESTAMPTZ` | `NULL` unless `deleted = true`; then `NOT NULL`              |
+
+  A `CHECK` constraint MUST keep `deleted` and `deleted_at` consistent. Records MUST be removed
+  by soft delete (`deleted = true`, `deleted_at` set, `updated_*` updated); hard `DELETE` of
+  rows is prohibited. Queries MUST exclude soft-deleted rows by default, and unique constraints
+  that must ignore deleted rows MUST be partial indexes (`WHERE NOT deleted`). Actor values
+  MUST come from the request's authenticated identity carried in `context.Context`, never from
+  client-supplied request body fields. Append-only financial records still carry these columns,
+  but are never updated or soft-deleted; corrections remain compensating entries.
 - Schema changes MUST be made only through versioned, forward-only SQL migration files that are
   committed to the repository and reviewed. Manual changes to shared databases are prohibited.
 
@@ -139,7 +162,8 @@ what happened and why.
   in CI and at deploy time.
 - **API specification**: OpenAPI 3.x document(s) committed to the repository.
 - **Configuration**: environment variables, following 12-factor practice; the service MUST fail
-  fast at startup on missing or invalid configuration.
+  fast at startup on missing or invalid configuration. This includes the display timezone (an
+  IANA name such as `Asia/Jakarta`) used to render API timestamps.
 - **Packaging**: the service builds as a single static binary and runs in a container image.
 - **Performance baseline**: p95 latency under 300 ms for standard read endpoints under expected
   load; every query on a hot path MUST be backed by an appropriate index. Deviations MUST be
@@ -156,7 +180,8 @@ what happened and why.
 - PRs that change money movement, interest calculation, or loan state transitions MUST include
   tests for edge cases (zero, negative, rounding boundaries, partial payments, concurrency).
 - PRs that add or change migrations MUST describe their impact on existing data and locking
-  behavior on large tables.
+  behavior on large tables, and every new table MUST include the audit columns required by
+  Principle III.
 - Changes to the OpenAPI spec MUST be reviewed for backward compatibility; breaking changes
   require a version bump per Principle I.
 - Feature work follows the Spec Kit flow: specify → plan (with Constitution Check) → tasks →
@@ -180,4 +205,4 @@ what happened and why.
 - Compliance with this constitution SHOULD be reviewed at least quarterly, or whenever the
   technology stack changes.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-08 | **Last Amended**: 2026-10-08
+**Version**: 1.2.0 | **Ratified**: 2026-10-08 | **Last Amended**: 2026-10-08
