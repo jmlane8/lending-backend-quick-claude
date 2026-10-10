@@ -75,7 +75,9 @@ references use the form "Principle III".
     request body, the response status, and the response body.
   - **Same transaction**: the key row is inserted in the same transaction as the application.
   - **First request with a key**: the key row is inserted with `INSERT ... ON CONFLICT DO
-    NOTHING` before the application row, and the stored response is saved before commit.
+    NOTHING` before the application row, with the response columns empty. The stored response
+    is filled in with an `UPDATE` just before commit.
+  - **Hash**: the request hash is SHA-256 of the request body after `json.Compact`.
   - **Repeated key, same body hash**: replay the stored status and body; no new application.
   - **Repeated key, different body hash**: 422 with problem type `idempotency-key-reused`.
   - **Two identical requests at once**: the second one's insert waits on the first one's

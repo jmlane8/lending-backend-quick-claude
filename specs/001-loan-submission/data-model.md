@@ -110,13 +110,19 @@ Request deduplication for `POST /v1/loan-applications` (FR-006; research R5).
 | `actor`               | `TEXT`        | `NOT NULL` (JWT `sub`)                                  |
 | `idempotency_key`     | `TEXT`        | `NOT NULL`, length 1–255                                |
 | `request_hash`        | `BYTEA`       | `NOT NULL` (SHA-256 of canonical request body)          |
-| `response_status`     | `SMALLINT`    | `NOT NULL`                                              |
-| `response_body`       | `JSONB`       | `NOT NULL` (no personal data: reference, status, time, currency) |
+| `response_status`     | `SMALLINT`    | `NULL` on insert; set before commit                     |
+| `response_body`       | `JSONB`       | `NULL` on insert; set before commit (no personal data: reference, status, time, currency) |
 | `loan_application_id` | `UUID`        | `NULL`, FK → `loan_applications(id)`                    |
 | `expires_at`          | `TIMESTAMPTZ` | `NOT NULL` (`created_at + 24h`)                         |
 | **[audit]**           |               |                                                         |
 
 **Indexes**: `UNIQUE (actor, idempotency_key) WHERE NOT deleted`.
+
+The key row is inserted **first** in the transaction, with response columns `NULL`. This is so a
+concurrent duplicate request waits on this row instead of hitting the open-application indexes.
+The response columns are filled with an `UPDATE` just before commit. A committed row therefore
+always has both response columns set, enforced by
+`CHECK ((response_status IS NULL) = (response_body IS NULL))`.
 
 ## State transitions
 
