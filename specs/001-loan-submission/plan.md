@@ -82,6 +82,7 @@ CLARIFICATION.
 | IV. AuthN/AuthZ | JWT + scope `loan-applications:submit` (research R6) | ✅ | ✅ |
 | IV. Parameterized SQL / input validation | sqlc-generated queries; full validation at the boundary | ✅ | ✅ |
 | IV. Secrets, personal data | Env/secret manager only; logs carry field paths and codes, never values (FR-050) | ✅ | ✅ |
+| IV. Encryption at rest | Storage-level encryption required for every environment with real data (research R13) | ✅ | ✅ |
 | IV. govulncheck | In CI gate | ✅ | ✅ |
 | V. Observability | slog JSON + request ID, `/healthz`, `/readyz`, `/metrics`, status-history audit (research R10, R12) | ✅ | ✅ |
 | VI. Simplicity | Standard library mux, hand-written validation, no ORM; every dependency justified in research | ✅ | ✅ |
@@ -109,16 +110,21 @@ specs/001-loan-submission/
 ### Source Code (repository root)
 
 ```text
+.github/workflows/ci.yml         # CI quality gates
+
 cmd/
-└── api/
-    └── main.go                  # wiring: config → pool → migrations check → server; graceful shutdown
+├── api/
+│   └── main.go                  # wiring: config → pool → migrations check → server; graceful shutdown
+└── devtoken/
+    └── main.go                  # dev-only JWT minting for local testing
 
 api/
 └── openapi.yaml                 # source-of-truth contract (from contracts/openapi.yaml)
 
 migrations/
-├── 000001_create_loan_applications.up.sql
-└── 000001_create_loan_applications.down.sql
+├── embed.go                     # embeds *.sql for the migration runner
+├── 000001_create_loan_applications.{up,down}.sql
+└── 000002_create_idempotency_keys.{up,down}.sql
 
 internal/
 ├── config/                      # env parsing, fail-fast validation (APP_CURRENCY, APP_TIMEZONE, DB, JWT)
@@ -126,6 +132,7 @@ internal/
 ├── httpx/                       # problem+json, JSON decode (strict, size limit), Timestamp/Date types,
 │                                #   request-ID + logging + metrics middleware
 ├── money/                       # Amount (int64 minor units), parse from json.Number
+├── server/                      # mux assembly, middleware chain, /healthz, /readyz, /metrics
 ├── db/
 │   ├── pool.go                  # pgxpool setup, readiness ping
 │   ├── queries/*.sql            # sqlc input
@@ -138,6 +145,7 @@ internal/
     └── *_test.go                # unit tests (validation, mapping) next to code
 
 tests/
+├── testutil/                    # Testcontainers PostgreSQL, JWT signer, fixed clock
 ├── integration/                 # //go:build integration — repository + service against Testcontainers PG
 └── contract/                    # //go:build integration — HTTP server validated against api/openapi.yaml
 ```

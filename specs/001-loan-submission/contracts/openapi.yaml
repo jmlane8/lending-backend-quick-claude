@@ -1,11 +1,11 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
   title: Lending Backend API
   version: 1.0.0
   description: |
     Loan application submission (feature 001-loan-submission).
 
-    Timestamps use `YYYY-MM-DDTHH:MM:SS±HH:MM` (e.g. `2026-05-05T14:30:00+07:00`), with no
+    Timestamps use `YYYY-MM-DDTHH:MM:SSÂ±HH:MM` (e.g. `2026-05-05T14:30:00+07:00`), with no
     fractional seconds and no `Z`. Calendar dates use `YYYY-MM-DD`. Monetary amounts are JSON
     numbers with at most 2 decimal places, in the system currency returned as `currency`.
 servers:
@@ -178,8 +178,9 @@ components:
           maxLength: 254
         monthlyIncome:
           type: number
-          exclusiveMinimum: 0
-          multipleOf: 0.01
+          minimum: 0
+          exclusiveMinimum: true
+          description: Greater than 0, at most 2 decimal places.
         maritalStatus:
           type: string
           enum: [SINGLE, MARRIED, DIVORCED, WIDOWED]
@@ -187,15 +188,6 @@ components:
           $ref: '#/components/schemas/Spouse'
       description: >
         `spouse` is required when `maritalStatus` is `MARRIED` and must be absent otherwise.
-      if:
-        properties:
-          maritalStatus:
-            const: MARRIED
-      then:
-        required: [spouse]
-      else:
-        not:
-          required: [spouse]
     Address:
       type: object
       additionalProperties: false
@@ -231,7 +223,7 @@ components:
         monthlyIncome:
           type: number
           minimum: 0
-          multipleOf: 0.01
+          description: Zero or greater, at most 2 decimal places.
     CarCollateral:
       type: object
       additionalProperties: false

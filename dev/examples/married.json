@@ -1,0 +1,20 @@
+{
+  "customer": {
+    "fullName": "Budi Santoso",
+    "idNumber": "3171234567890001",
+    "address": { "street": "Jl. Merdeka No. 10", "city": "Jakarta", "zipCode": "10110" },
+    "birthDate": "1988-03-21",
+    "phoneNumber": "+6281234567890",
+    "email": "budi@example.com",
+    "monthlyIncome": 15000000,
+    "maritalStatus": "MARRIED",
+    "spouse": {
+      "fullName": "Siti Rahma",
+      "idNumber": "3171234567890002",
+      "phoneNumber": "+6281298765432",
+      "monthlyIncome": 0
+    }
+  },
+  "collateral": { "brand": "Toyota", "model": "Avanza", "manufacturingYear": 2021, "licensePlate": "B 1234 XYZ" },
+  "loan": { "amount": 85000000, "tenureMonths": 36 }
+}

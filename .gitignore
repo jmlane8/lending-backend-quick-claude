@@ -1,0 +1,21 @@
+# Build output
+/bin/
+*.exe
+*.test
+*.out
+coverage.out
+vendor/
+
+# Local dev secrets
+dev/*.key
+dev/*.pub
+.env
+.env.*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

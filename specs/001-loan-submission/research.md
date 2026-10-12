@@ -108,7 +108,23 @@ references use the form "Principle III".
 - **Alternatives considered**: API keys (no per-user actor identity for audit columns); mTLS
   only (identifies services, not users).
 - **Follow-up**: confirm the identity provider and claim names before deployment. Only
-  configuration changes, not code.
+  configuration changes, not code. This feature implements `AUTH_JWT_PUBLIC_KEY` only;
+  `AUTH_JWT_JWKS_URL` support is deferred until the identity provider is chosen.
+
+## R13. Encryption of personal data at rest
+
+- **Decision**: Storage-level encryption, decided 2026-10-12. Every environment holding real
+  data MUST run PostgreSQL on encrypted storage: a managed PostgreSQL service with encryption at
+  rest enabled, or encrypted volumes for self-hosted. Backups and replicas MUST be encrypted too.
+  This is a deployment requirement recorded in `README.md`; there is no application code.
+- **Rationale**: Satisfies constitution Principle IV. It keeps the "one open application"
+  unique index on the plain ID number, and avoids application-level key management.
+- **Alternatives considered**: column-level AES-GCM encryption of ID numbers with an HMAC column
+  for uniqueness. This protects against database-level read access as well, but adds key
+  management and rotation. Revisit it if a compliance review requires field-level protection.
+- **Currency of spouse income**: the spouse's `monthly_income` is in the `currency` of its parent
+  `loan_applications` row (one-to-one through the FK). This satisfies Principle III's explicit
+  currency rule without a duplicate column.
 
 ## R7. Validation approach
 

@@ -1,0 +1,378 @@
+openapi: 3.0.3
+info:
+  title: Lending Backend API
+  version: 1.0.0
+  description: |
+    Loan application submission (feature 001-loan-submission).
+
+    Timestamps use `YYYY-MM-DDTHH:MM:SSÂ±HH:MM` (e.g. `2026-05-05T14:30:00+07:00`), with no
+    fractional seconds and no `Z`. Calendar dates use `YYYY-MM-DD`. Monetary amounts are JSON
+    numbers with at most 2 decimal places, in the system currency returned as `currency`.
+servers:
+  - url: /v1
+security:
+  - bearerAuth: []
+paths:
+  /loan-applications:
+    post:
+      operationId: submitLoanApplication
+      summary: Submit a car-backed loan application
+      description: |
+        Validates the whole application. If every field is valid, the application is stored
+        with status `IN_PROGRESS`. Requires scope `loan-applications:submit`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitLoanApplicationRequest'
+            examples:
+              married:
+                $ref: '#/components/examples/MarriedCustomer'
+              single:
+                $ref: '#/components/examples/SingleCustomer'
+      responses:
+        '201':
+          description: Application accepted and stored as IN_PROGRESS (or idempotent replay).
+          headers:
+            Location:
+              description: URL of the created application.
+              schema:
+                type: string
+                example: /v1/loan-applications/01929f3e-7c1a-7b3e-9d2f-4a6c8e0b1d23
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanApplicationSubmitted'
+        '400':
+          description: >
+            Malformed request (`malformed-request`), missing/invalid Idempotency-Key
+            (`invalid-idempotency-key`), or one or more invalid fields (`validation-failed`,
+            all listed in `errors`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblem'
+              examples:
+                validationFailed:
+                  value:
+                    type: https://errors.lending.example/validation-failed
+                    title: Validation failed
+                    status: 400
+                    detail: 3 fields are invalid.
+                    instance: /v1/loan-applications
+                    errors:
+                      - field: /customer/email
+                        code: invalid_format
+                        message: must be a valid email address
+                      - field: /customer/address/city
+                        code: required
+                        message: is required
+                      - field: /loan/amount
+                        code: not_multiple_of_100
+                        message: must be a positive multiple of 100
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: >
+            The customer ID number already has an IN_PROGRESS application
+            (`customer-has-open-application`), or the license plate already backs one
+            (`collateral-in-use`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Idempotency-Key reused with a different request body (`idempotency-key-reused`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+        '503':
+          description: Temporarily unavailable; safe to retry with the same Idempotency-Key.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated unique key (UUID recommended). Retries must reuse it.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: '^[\x21-\x7E]+$'
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Correlation ID; generated if absent and echoed in the response.
+      schema:
+        type: string
+        maxLength: 128
+  responses:
+    Problem:
+      description: Error (RFC 9457 problem details).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    SubmitLoanApplicationRequest:
+      type: object
+      additionalProperties: false
+      required: [customer, collateral, loan]
+      properties:
+        customer:
+          $ref: '#/components/schemas/Customer'
+        collateral:
+          $ref: '#/components/schemas/CarCollateral'
+        loan:
+          $ref: '#/components/schemas/ProposedLoan'
+    Customer:
+      type: object
+      additionalProperties: false
+      required: [fullName, idNumber, address, birthDate, phoneNumber, email, monthlyIncome, maritalStatus]
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        idNumber:
+          type: string
+          pattern: '^[A-Za-z0-9]{1,30}$'
+        address:
+          $ref: '#/components/schemas/Address'
+        birthDate:
+          type: string
+          format: date
+          description: YYYY-MM-DD; customer must be at least 18 on the submission date.
+          example: '1990-04-17'
+        phoneNumber:
+          type: string
+          pattern: '^\+[0-9]{8,15}$'
+          example: '+6281234567890'
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        monthlyIncome:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+          description: Greater than 0, at most 2 decimal places.
+        maritalStatus:
+          type: string
+          enum: [SINGLE, MARRIED, DIVORCED, WIDOWED]
+        spouse:
+          $ref: '#/components/schemas/Spouse'
+      description: >
+        `spouse` is required when `maritalStatus` is `MARRIED` and must be absent otherwise.
+    Address:
+      type: object
+      additionalProperties: false
+      required: [street, city, zipCode]
+      properties:
+        street:
+          type: string
+          minLength: 1
+          maxLength: 200
+        city:
+          type: string
+          minLength: 1
+          maxLength: 100
+        zipCode:
+          type: string
+          pattern: '^[A-Za-z0-9 -]{3,10}$'
+    Spouse:
+      type: object
+      additionalProperties: false
+      required: [fullName, idNumber, phoneNumber, monthlyIncome]
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        idNumber:
+          type: string
+          pattern: '^[A-Za-z0-9]{1,30}$'
+          description: Must differ from the customer's idNumber.
+        phoneNumber:
+          type: string
+          pattern: '^\+[0-9]{8,15}$'
+        monthlyIncome:
+          type: number
+          minimum: 0
+          description: Zero or greater, at most 2 decimal places.
+    CarCollateral:
+      type: object
+      additionalProperties: false
+      required: [brand, model, manufacturingYear, licensePlate]
+      properties:
+        brand:
+          type: string
+          minLength: 1
+          maxLength: 50
+        model:
+          type: string
+          minLength: 1
+          maxLength: 50
+        manufacturingYear:
+          type: integer
+          minimum: 1900
+          description: Must not be later than next calendar year.
+        licensePlate:
+          type: string
+          pattern: '^[A-Za-z0-9 -]{1,15}$'
+          description: Stored uppercase without spaces or hyphens.
+    ProposedLoan:
+      type: object
+      additionalProperties: false
+      required: [amount, tenureMonths]
+      properties:
+        amount:
+          type: integer
+          minimum: 100
+          multipleOf: 100
+        tenureMonths:
+          type: integer
+          minimum: 3
+          maximum: 48
+    LoanApplicationSubmitted:
+      type: object
+      required: [id, status, currency, submittedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [IN_PROGRESS]
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        submittedAt:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$'
+          example: '2026-10-09T14:30:00+07:00'
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            errors:
+              type: array
+              items:
+                $ref: '#/components/schemas/FieldError'
+    FieldError:
+      type: object
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+          description: JSON Pointer to the invalid field.
+        code:
+          type: string
+          enum:
+            - required
+            - too_short
+            - too_long
+            - invalid_format
+            - invalid_value
+            - not_positive
+            - negative
+            - too_many_decimals
+            - not_multiple_of_100
+            - out_of_range
+            - in_future
+            - under_minimum_age
+            - spouse_required
+            - spouse_not_allowed
+            - same_as_customer
+        message:
+          type: string
+  examples:
+    MarriedCustomer:
+      value:
+        customer:
+          fullName: Budi Santoso
+          idNumber: '3171234567890001'
+          address:
+            street: Jl. Merdeka No. 10
+            city: Jakarta
+            zipCode: '10110'
+          birthDate: '1988-03-21'
+          phoneNumber: '+6281234567890'
+          email: budi@example.com
+          monthlyIncome: 15000000
+          maritalStatus: MARRIED
+          spouse:
+            fullName: Siti Rahma
+            idNumber: '3171234567890002'
+            phoneNumber: '+6281298765432'
+            monthlyIncome: 0
+        collateral:
+          brand: Toyota
+          model: Avanza
+          manufacturingYear: 2021
+          licensePlate: B 1234 XYZ
+        loan:
+          amount: 85000000
+          tenureMonths: 36
+    SingleCustomer:
+      value:
+        customer:
+          fullName: Andi Wijaya
+          idNumber: '3273000011112222'
+          address:
+            street: Jl. Asia Afrika 8
+            city: Bandung
+            zipCode: '40111'
+          birthDate: '1999-11-02'
+          phoneNumber: '+6285711122233'
+          email: andi@example.com
+          monthlyIncome: 9500000.50
+          maritalStatus: SINGLE
+        collateral:
+          brand: Honda
+          model: Jazz
+          manufacturingYear: 2019
+          licensePlate: D-5678-AB
+        loan:
+          amount: 30000000
+          tenureMonths: 24

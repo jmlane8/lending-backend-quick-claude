@@ -1,0 +1,14 @@
+{
+  "customer": {
+    "fullName": "Andi Wijaya",
+    "idNumber": "3273000011112222",
+    "address": { "street": "Jl. Asia Afrika 8", "city": "Bandung", "zipCode": "40111" },
+    "birthDate": "1999-11-02",
+    "phoneNumber": "+6285711122233",
+    "email": "andi@example.com",
+    "monthlyIncome": 9500000.50,
+    "maritalStatus": "SINGLE"
+  },
+  "collateral": { "brand": "Honda", "model": "Jazz", "manufacturingYear": 2019, "licensePlate": "D-5678-AB" },
+  "loan": { "amount": 30000000, "tenureMonths": 24 }
+}

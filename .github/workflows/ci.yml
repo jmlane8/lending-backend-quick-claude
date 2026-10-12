@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: lending
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          out="$(gofmt -l . | grep -v '^internal/db/sqlc/' || true)"
+          if [ -n "$out" ]; then echo "$out"; exit 1; fi
+
+      - name: go vet
+        run: go vet ./... && go vet -tags=integration ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+
+      - name: sqlc drift check
+        run: go run github.com/sqlc-dev/sqlc/cmd/sqlc@latest diff
+
+      - name: Migrations apply from scratch
+        env:
+          DATABASE_URL: postgres://postgres:ci@localhost:5432/lending?sslmode=disable
+        run: go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest -path migrations -database "$DATABASE_URL" up
+
+      - name: Unit tests
+        run: go test -race ./...
+
+      - name: Integration and contract tests
+        run: go test -race -tags=integration ./...
+
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

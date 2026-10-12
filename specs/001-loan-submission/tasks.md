@@ -43,15 +43,15 @@ on its own.
 
 **Purpose**: Project initialization and tooling
 
-- [ ] T001 Initialize the Go module with `go mod init github.com/jmlane8/lending-backend-quick-claude` (latest stable Go in the `go` directive) and create the directories from plan.md: `cmd/api/`, `cmd/devtoken/`, `api/`, `migrations/`, `internal/{config,auth,httpx,money,server,db/queries,db/sqlc,loanapplication}/`, `tests/{integration,contract,testutil}/`, `dev/examples/`
-- [ ] T002 [P] Create `.gitignore` ignoring `/bin/`, `dev/*.key`, `dev/*.pub`, `*.test`, `coverage.out`, `.env`
-- [ ] T003 [P] Create `.golangci.yml` enabling `errcheck`, `govet`, `staticcheck`, `gosec`, `revive`, `unused`, `gofmt`, `goimports`, `bodyclose`, `sqlclosecheck`, `contextcheck`, `errorlint`
-- [ ] T004 [P] Create `sqlc.yaml`:
+- [X] T001 Initialize the Go module with `go mod init github.com/jmlane8/lending-backend-quick-claude` (latest stable Go in the `go` directive) and create the directories from plan.md: `cmd/api/`, `cmd/devtoken/`, `api/`, `migrations/`, `internal/{config,auth,httpx,money,server,db/queries,db/sqlc,loanapplication}/`, `tests/{integration,contract,testutil}/`, `dev/examples/`
+- [X] T002 [P] Create `.gitignore` ignoring `/bin/`, `dev/*.key`, `dev/*.pub`, `*.test`, `coverage.out`, `.env`
+- [X] T003 [P] Create `.golangci.yml` enabling `errcheck`, `govet`, `staticcheck`, `gosec`, `revive`, `unused`, `gofmt`, `goimports`, `bodyclose`, `sqlclosecheck`, `contextcheck`, `errorlint`
+- [X] T004 [P] Create `sqlc.yaml`:
   - `version: "2"`, `engine: postgresql`
   - `schema: migrations`, `queries: internal/db/queries`
   - Go output: package `sqlc`, path `internal/db/sqlc`, `sql_package: pgx/v5`, `emit_pointers_for_null_types: true`
-- [ ] T005 [P] Copy `specs/001-loan-submission/contracts/openapi.yaml` to `api/openapi.yaml`; from now on it is the source-of-truth contract (Principle I)
-- [ ] T006 [P] Create `Makefile` with these targets:
+- [X] T005 [P] Copy `specs/001-loan-submission/contracts/openapi.yaml` to `api/openapi.yaml`; from now on it is the source-of-truth contract (Principle I)
+- [X] T006 [P] Create `Makefile` with these targets:
   - `build` → `go build -o bin/api ./cmd/api`
   - `run`
   - `test` → `go test -race ./...`
@@ -62,19 +62,19 @@ on its own.
   - `migrate-up` → `migrate -path migrations -database "$$DATABASE_URL" up`
   - `dev-keys` → generate an ECDSA P-256 keypair into `dev/jwt.key` and `dev/jwt.pub` with openssl
   - `dev-token` → `go run ./cmd/devtoken`
-- [ ] T007 [P] Create `.github/workflows/ci.yml` running on push and pull_request:
+- [X] T007 [P] Create `.github/workflows/ci.yml` running on push and pull_request:
   - Set up Go from `go.mod`.
   - `gofmt -l` check (fail if any output), `go vet`, `golangci-lint`.
   - `go test -race ./...`, then `go test -race -tags=integration ./...` (Docker is available on `ubuntu-latest`).
   - Migration apply-from-scratch: `migrate up` against a `postgres:18` service container.
   - `govulncheck ./...`.
-- [ ] T008 [P] Create `cmd/devtoken/main.go`. It reads `dev/jwt.key` (PEM ECDSA) and prints an ES256 JWT to stdout with claims:
+- [X] T008 [P] Create `cmd/devtoken/main.go`. It reads `dev/jwt.key` (PEM ECDSA) and prints an ES256 JWT to stdout with claims:
   - `iss` = `$AUTH_JWT_ISSUER` (default `dev`)
   - `aud` = `$AUTH_JWT_AUDIENCE` (default `lending-api`)
   - `sub` = flag `-sub` (default `dev-user`)
   - `scope` = flag `-scope` (default `loan-applications:submit`)
   - `exp` = now + 1h
-- [ ] T009 [P] Create `dev/examples/married.json` and `dev/examples/single.json` with the `MarriedCustomer` and `SingleCustomer` example bodies from `api/openapi.yaml` (`components.examples`)
+- [X] T009 [P] Create `dev/examples/married.json` and `dev/examples/single.json` with the `MarriedCustomer` and `SingleCustomer` example bodies from `api/openapi.yaml` (`components.examples`)
 
 ---
 
@@ -85,62 +85,62 @@ on its own.
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete. Within each pair,
 write the test first and see it fail.
 
-- [ ] T010 [P] Write table-driven tests in `internal/config/config_test.go` for `config.Load(getenv func(string) string) (Config, error)`:
+- [X] T010 [P] Write table-driven tests in `internal/config/config_test.go` for `config.Load(getenv func(string) string) (Config, error)`:
   - Required, missing → error naming the variable: `DATABASE_URL`, `APP_CURRENCY`, `APP_TIMEZONE`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_PUBLIC_KEY`.
   - `APP_CURRENCY` must match `^[A-Z]{3}$`.
   - `APP_TIMEZONE` must load via `time.LoadLocation`.
   - `AUTH_JWT_PUBLIC_KEY` must be a PEM-encoded ECDSA or RSA public key.
   - Defaults: `HTTP_ADDR=:8080`, `ERROR_TYPE_BASE_URL=https://errors.lending.example/`, `SHUTDOWN_TIMEOUT=20s`, `DB_MAX_CONNS=10`.
-- [ ] T011 Implement `internal/config/config.go` so T010 passes. Collect all errors, not just the first, so startup fails fast with one complete message.
-- [ ] T012 [P] Write table-driven tests in `internal/money/amount_test.go` for `money.ParseAmount(n json.Number) (Amount, error)`, where `Amount` is `int64` minor units:
+- [X] T011 Implement `internal/config/config.go` so T010 passes. Collect all errors, not just the first, so startup fails fast with one complete message.
+- [X] T012 [P] Write table-driven tests in `internal/money/amount_test.go` for `money.ParseAmount(n json.Number) (Amount, error)`, where `Amount` is `int64` minor units:
   - Accepts: `"15000"` → 1500000, `"9500000.50"` → 950000050, `"0"`, `"0.5"` → 50.
   - Rejects: more than 2 decimals (`"1.005"` → `ErrTooManyDecimals`), exponent notation (`"1e3"`), anything that overflows int64, non-numeric input.
   - Also tests `Amount.IsWhole()`, `Amount.IsMultipleOf(units int64)` (major units), and `Amount.String()` rendering `"15000.00"` for `NUMERIC` parameters.
-- [ ] T013 Implement `internal/money/amount.go` so T012 passes using only string and integer arithmetic (no `float64`, no `strconv.ParseFloat`).
-- [ ] T014 [P] Write tests in `internal/httpx/timestamp_test.go`:
+- [X] T013 Implement `internal/money/amount.go` so T012 passes using only string and integer arithmetic (no `float64`, no `strconv.ParseFloat`).
+- [X] T014 [P] Write tests in `internal/httpx/timestamp_test.go`:
   - `httpx.Timestamp` marshals using layout `2006-01-02T15:04:05-07:00` in a configured `*time.Location`: a UTC instant shows `+07:00` for `Asia/Jakarta`, and UTC itself is `+00:00`, never `Z`. Nanoseconds are truncated.
   - `Timestamp` unmarshal accepts only that layout; rejects `Z`, fractional seconds, and a missing offset.
   - `httpx.Date` marshals and unmarshals strictly `2006-01-02`, and rejects `2001-02-30`.
-- [ ] T015 Implement `internal/httpx/timestamp.go`:
+- [X] T015 Implement `internal/httpx/timestamp.go`:
   - `Timestamp` with `SetDisplayLocation(*time.Location)` called once at startup, defaulting to UTC.
   - `Date` type with a `Time()` accessor.
   - Make T014 pass.
-- [ ] T016 [P] Write tests in `internal/httpx/problem_test.go` and `internal/httpx/decode_test.go`:
+- [X] T016 [P] Write tests in `internal/httpx/problem_test.go` and `internal/httpx/decode_test.go`:
   - `WriteProblem(w, r, Problem)` writes `Content-Type: application/problem+json` with fields `type`, `title`, `status`, `detail`, `instance` (= request path) and optional `errors`.
   - `DecodeJSON(r, dst, maxBytes)` uses `DisallowUnknownFields()` and `UseNumber()` and a 64 KiB limit via `http.MaxBytesReader`, and rejects trailing data after the JSON value.
   - `DecodeJSON` returns a typed `*MalformedError` describing an unknown field, a wrong type at a JSON path, a body too large, or invalid JSON.
-- [ ] T017 Implement `internal/httpx/problem.go` (with `ProblemTypeBase` set from config) and `internal/httpx/decode.go` so T016 passes.
-- [ ] T018 [P] Write tests in `internal/httpx/middleware_test.go`:
+- [X] T017 Implement `internal/httpx/problem.go` (with `ProblemTypeBase` set from config) and `internal/httpx/decode.go` so T016 passes.
+- [X] T018 [P] Write tests in `internal/httpx/middleware_test.go`:
   - `RequestID` keeps a valid incoming `X-Request-ID` (≤128 chars) or generates a UUIDv7, stores it in context, and echoes it in the response header.
   - `Logging` emits one slog JSON line per request with `request_id`, `method`, `route`, `status`, `duration_ms`, and never logs bodies.
   - `Recover` turns a panic into a 500 `internal-error` problem.
   - `Metrics` records `http_request_duration_seconds` (histogram) and `http_requests_total` labeled by `route` and `code` class.
-- [ ] T019 Implement `internal/httpx/middleware.go` and `internal/httpx/log.go`. The latter provides a `LoggerFrom(ctx)` helper that returns the slog logger carrying `request_id`. Make T018 pass.
-- [ ] T020 [P] Write tests in `internal/auth/auth_test.go` for the `auth.Middleware(verifier, requiredScope)`. Tokens are signed in the test with a generated ECDSA key.
+- [X] T019 Implement `internal/httpx/middleware.go` and `internal/httpx/log.go`. The latter provides a `LoggerFrom(ctx)` helper that returns the slog logger carrying `request_id`. Make T018 pass.
+- [X] T020 [P] Write tests in `internal/auth/auth_test.go` for the `auth.Middleware(verifier, requiredScope)`. Tokens are signed in the test with a generated ECDSA key.
   - Missing or malformed `Authorization: Bearer` → 401 `unauthenticated`. So are a bad signature, an expired token, and a wrong `iss` or `aud`.
   - A valid token without scope `loan-applications:submit` (space-separated `scope` claim) → 403 `forbidden`.
   - A valid token → the next handler runs, and `auth.ActorFrom(ctx)` returns `sub`.
   - An empty `sub` → 401.
-- [ ] T021 Implement `internal/auth/jwt.go` (`golang-jwt/jwt/v5`, ES256/RS256 allowed, `iss`/`aud`/`exp` checked, 30 s leeway) and `internal/auth/context.go` (unexported context key; `WithActor`, `ActorFrom`) so T020 passes.
-- [ ] T022 Implement `internal/db/pool.go`:
+- [X] T021 Implement `internal/auth/jwt.go` (`golang-jwt/jwt/v5`, ES256/RS256 allowed, `iss`/`aud`/`exp` checked, 30 s leeway) and `internal/auth/context.go` (unexported context key; `WithActor`, `ActorFrom`) so T020 passes.
+- [X] T022 Write table-driven tests in `internal/db/pool_test.go` for `IsUnavailable` (SQLSTATE `08006`, `53300`, `57P01` → true; `23505` → false; `context.DeadlineExceeded` and `*pgconn.ConnectError` → true; nil → false), then implement `internal/db/pool.go`:
   - `Open(ctx, cfg) (*pgxpool.Pool, error)` with `MaxConns` from config, and `Ping(ctx)` with a 1 s timeout.
   - `IsUnavailable(err) bool`: true for connection errors, `context.DeadlineExceeded`, and SQLSTATE classes `08`, `53`, `57P01`. Used to produce the 503 response.
-- [ ] T023 Create `migrations/embed.go` (`package migrations`, `//go:embed *.sql`, `var FS embed.FS`) and `internal/db/migrate.go` with `Up(databaseURL string) error` using `golang-migrate` with the `iofs` source over `migrations.FS`.
-- [ ] T024 [P] Create `tests/testutil/postgres.go`:
+- [X] T023 Create `migrations/embed.go` (`package migrations`, `//go:embed *.sql`, `var FS embed.FS`) and `internal/db/migrate.go` with `Up(databaseURL string) error` using `golang-migrate` with the `iofs` source over `migrations.FS`.
+- [X] T024 [P] Create `tests/testutil/postgres.go`:
   - `StartPostgres(t) *pgxpool.Pool`: testcontainers-go postgres module, image `postgres:18`; runs `db.Up`; stops the container in `t.Cleanup`.
   - `TruncateAll(t, pool)`.
-- [ ] T025 [P] Create `tests/testutil/jwt.go` (`NewSigner(t)` generates an ECDSA key and returns the PEM public key, plus `Token(sub, scope string) string`) and `tests/testutil/clock.go` (a fixed `func() time.Time` for tests)
-- [ ] T026 [P] Write tests in `internal/server/server_test.go` for health and metrics:
+- [X] T025 [P] Create `tests/testutil/jwt.go` (`NewSigner(t)` generates an ECDSA key and returns the PEM public key, plus `Token(sub, scope string) string`) and `tests/testutil/clock.go` (a fixed `func() time.Time` for tests)
+- [X] T026 [P] Write tests in `internal/server/server_test.go` for health and metrics:
   - `GET /healthz` → 200 `{"status":"ok"}`.
   - `GET /readyz` → 200 when the pinger succeeds and 503 problem `temporarily-unavailable` when it fails.
-  - `GET /metrics` serves Prometheus text.
+  - `GET /metrics` serves Prometheus text, including pgxpool stats `db_pool_acquired_conns`, `db_pool_idle_conns`, `db_pool_total_conns`, `db_pool_max_conns`, `db_pool_acquire_count_total`, `db_pool_acquire_duration_seconds_total` (constitution Principle V).
   - Unknown route → 404 problem; wrong method → 405 problem.
-- [ ] T027 Implement `internal/server/server.go`:
-  - `New(deps Deps) http.Handler` builds the `http.ServeMux` with `/healthz`, `/readyz`, and `/metrics` (promhttp on a dedicated registry).
+- [X] T027 Implement `internal/server/server.go`:
+  - `New(deps Deps) http.Handler` builds the `http.ServeMux` with `/healthz`, `/readyz`, and `/metrics` (promhttp on a dedicated registry, with a custom collector reading `pool.Stat()` for the pgxpool metrics).
   - Wraps everything in `Recover → RequestID → Logging → Metrics`.
   - Exposes `deps.Routes []func(*http.ServeMux)` for feature registration.
   - Make T026 pass.
-- [ ] T028 Implement `cmd/api/main.go`:
+- [X] T028 Implement `cmd/api/main.go`:
   - `config.Load(os.Getenv)` and exit 1 with the error on failure.
   - Set up the slog JSON handler, call `httpx.SetDisplayLocation`, open the pool, run `db.Up`, and build `server.New`.
   - `http.Server` with `ReadHeaderTimeout: 5s`, `ReadTimeout: 10s`, `WriteTimeout: 15s`, `IdleTimeout: 60s`.
@@ -161,19 +161,19 @@ token. Each returns 201 with matching DB rows, as in quickstart.md scenarios 1�
 
 ### Tests for User Story 1 ⚠️ write first, confirm they FAIL
 
-- [ ] T029 [P] [US1] Write unit tests in `internal/loanapplication/mapping_test.go` for `toApplication(req SubmitRequest) (Application, error)`:
+- [X] T029 [P] [US1] Write unit tests in `internal/loanapplication/mapping_test.go` for `toApplication(req SubmitRequest) (Application, error)`:
   - Text fields are trimmed.
   - `licensePlate` is normalized to uppercase with spaces and hyphens removed (`"b 1234-xyz"` → `"B1234XYZ"`).
   - `monthlyIncome`/`amount` are parsed via `money.ParseAmount` from `json.Number`.
   - The spouse is mapped only when present.
   - `birthDate` is kept as a date.
-- [ ] T030 [P] [US1] Write integration tests in `tests/integration/loanapplication_repository_test.go` using `testutil.StartPostgres`:
+- [X] T030 [P] [US1] Write integration tests in `tests/integration/loanapplication_repository_test.go` using `testutil.StartPostgres`:
   - (a) `Repository.Create` in a transaction persists every `loan_applications` column with `status='IN_PROGRESS'`, `currency` from the argument, `created_by = updated_by = actor`, `deleted=false`, and `deleted_at IS NULL`.
   - (b) For a married customer, exactly one `loan_application_spouses` row exists with the same audit values.
   - (c) Exactly one `loan_application_status_history` row exists with `from_status IS NULL`, `to_status='IN_PROGRESS'`, and `created_by=actor`.
   - (d) Atomicity: a spouse insert forced to fail (e.g. `full_name` of 101 chars bypassing validation) leaves 0 rows in all three tables.
   - (e) The DB `CHECK` constraints reject `loan_amount = 150.00` and `loan_tenure_months = 49`.
-- [ ] T031 [P] [US1] Write contract tests in `tests/contract/submit_success_test.go`:
+- [X] T031 [P] [US1] Write contract tests in `tests/contract/submit_success_test.go`:
   - Set up `httptest.NewServer(server.New(...))` with real Postgres (`testutil`), the `testutil` JWT signer, and a fixed clock.
   - POST each of `dev/examples/married.json` and `dev/examples/single.json` with header `Idempotency-Key: <uuid>`.
   - Check the request and response with `kin-openapi` `openapi3filter.ValidateRequest`/`ValidateResponse` against `api/openapi.yaml`.
@@ -182,7 +182,7 @@ token. Each returns 201 with matching DB rows, as in quickstart.md scenarios 1�
 
 ### Implementation for User Story 1
 
-- [ ] T032 [US1] Create `migrations/000001_create_loan_applications.up.sql` and `.down.sql`. The down script uses `DROP TABLE` in reverse order. Every column below is followed by the six audit columns and the `deleted`/`deleted_at` CHECK from Conventions.
+- [X] T032 [US1] Create `migrations/000001_create_loan_applications.up.sql` and `.down.sql`. The down script uses `DROP TABLE` in reverse order. Every column below is followed by the six audit columns and the `deleted`/`deleted_at` CHECK from Conventions.
   - `loan_applications`:
     - `id UUID PRIMARY KEY DEFAULT uuidv7()`
     - `status TEXT NOT NULL CHECK (status IN ('IN_PROGRESS'))`
@@ -218,8 +218,8 @@ token. Each returns 201 with matching DB rows, as in quickstart.md scenarios 1�
     - `loan_application_id UUID NOT NULL REFERENCES loan_applications(id)`, with an index
     - `from_status TEXT NULL`
     - `to_status TEXT NOT NULL`
-- [ ] T033 [US1] Write `internal/db/queries/loan_applications.sql` with sqlc queries `InsertLoanApplication :one` (RETURNING `id, submitted_at`), `InsertLoanApplicationSpouse :exec`, and `InsertStatusHistory :exec`. All set `created_by`/`updated_by` from a parameter. Run `make sqlc` and commit `internal/db/sqlc/`.
-- [ ] T034 [P] [US1] Create `internal/loanapplication/types.go`:
+- [X] T033 [US1] Write `internal/db/queries/loan_applications.sql` with sqlc queries `InsertLoanApplication :one` (RETURNING `id, submitted_at`), `InsertLoanApplicationSpouse :exec`, and `InsertStatusHistory :exec`. All set `created_by`/`updated_by` from a parameter. Run `make sqlc` and commit `internal/db/sqlc/`.
+- [X] T034 [P] [US1] Create `internal/loanapplication/types.go`:
   - `SubmitRequest`, with nested `CustomerRequest`, `AddressRequest`, `SpouseRequest` (pointer, optional), `CollateralRequest`, `LoanRequest`.
     - JSON tags exactly as `api/openapi.yaml` (camelCase).
     - Money fields and `manufacturingYear`/`tenureMonths`/`amount` are `json.Number`; `birthDate` is `httpx.Date`.
@@ -227,25 +227,24 @@ token. Each returns 201 with matching DB rows, as in quickstart.md scenarios 1�
   - Validated domain `Application`, with `money.Amount` fields and `*Spouse`.
   - `SubmitResult{ID uuid.UUID; Status string; Currency string; SubmittedAt httpx.Timestamp}`, with JSON tags `id`, `status`, `currency`, `submittedAt`.
   - `FieldError{Field, Code, Message string}`.
-- [ ] T035 [US1] Implement `internal/loanapplication/mapping.go` (`toApplication`; trimming; plate normalization `strings.ToUpper` and removal of `' '`/`'-'`) so T029 passes
-- [ ] T036 [US1] Implement `internal/loanapplication/repository.go`:
+- [X] T035 [US1] Implement `internal/loanapplication/mapping.go` (`toApplication`; trimming; plate normalization `strings.ToUpper` and removal of `' '`/`'-'`) so T029 passes
+- [X] T036 [US1] Implement `internal/loanapplication/repository.go`:
   - `Repository` with `Create(ctx, tx pgx.Tx, app Application, currency, actor string) (uuid.UUID, time.Time, error)`.
   - Uses sqlc `InsertLoanApplication`, then `InsertLoanApplicationSpouse` if `app.Spouse != nil`, then `InsertStatusHistory(nil → "IN_PROGRESS")`.
   - Converts `money.Amount` to `pgtype.Numeric` via `Amount.String()`.
   - Make T030 pass.
-- [ ] T037 [US1] Implement `internal/loanapplication/service.go`:
+- [X] T037 [US1] Implement `internal/loanapplication/service.go`:
   - `Service{pool, repo, currency, now func() time.Time}` with `Submit(ctx, req SubmitRequest, actor string) (SubmitResult, error)`.
   - Maps the request, begins a `pgx` transaction (`pgx.BeginFunc`), calls `repo.Create`, commits, and returns the result.
   - Increments the Prometheus counter `loan_applications_submitted_total`.
-- [ ] T038 [US1] Implement `internal/loanapplication/handler.go`:
+- [X] T038 [US1] Implement `internal/loanapplication/handler.go`:
   - `Handler.Register(mux)` adds `POST /v1/loan-applications` wrapped by `auth.Middleware(verifier, "loan-applications:submit")`.
   - Decodes with `httpx.DecodeJSON(r, &req, 64<<10)`; a `*MalformedError` → 400 `malformed-request`.
   - Reads the actor via `auth.ActorFrom`, calls `Service.Submit`, then writes 201 with `Location: /v1/loan-applications/{id}` and the `SubmitResult` JSON.
   - Any other error → 500 `internal-error`, logged without request values.
-- [ ] T039 [US1] Wire the loan application `Handler` into `server.Deps.Routes` in `cmd/api/main.go`, and into the contract-test server setup helper `tests/contract/setup_test.go`. The helper builds the full handler with real Postgres, the JWT signer, and a fixed clock, and is reused by all contract tests. Run T030 and T031 until green.
+- [X] T039 [US1] Wire the loan application `Handler` into `server.Deps.Routes` in `cmd/api/main.go`, and into the contract-test server setup helper `tests/contract/setup_test.go`. The helper builds the full handler with real Postgres, the JWT signer, and a fixed clock, and is reused by all contract tests. Run T030 and T031 until green.
 
-**Checkpoint**: Quickstart scenarios 1–2 and section 3 pass. US1 is a deployable MVP. The DB
-CHECK constraints guard against bad data, but friendly validation errors arrive in US2.
+**Checkpoint**: Quickstart scenarios 1–2 and section 3 pass. US1 is a demoable MVP for internal use only. It is NOT releasable to real clients until US3 (idempotency, constitution Principle I) is done. The DB CHECK constraints guard against bad data, and friendly validation errors arrive in US2.
 
 ---
 
@@ -262,7 +261,7 @@ are returned together:
 
 ### Tests for User Story 2 ⚠️ write first, confirm they FAIL
 
-- [ ] T040 [P] [US2] Write table-driven unit tests in `internal/loanapplication/validate_test.go` for `Validate(req SubmitRequest, today time.Time /* date in APP_TIMEZONE */) []FieldError`. There is one case per rule, asserting the exact `field` and `code`, plus one multi-error case asserting all errors are returned together.
+- [X] T040 [P] [US2] Write table-driven unit tests in `internal/loanapplication/validate_test.go` for `Validate(req SubmitRequest, today time.Time /* date in APP_TIMEZONE */) []FieldError`. There is one case per rule, asserting the exact `field` and `code`, plus one multi-error case asserting all errors are returned together.
 
   Customer fields:
 
@@ -296,10 +295,10 @@ are returned together:
   | `/collateral/brand` | 1–50 | |
   | `/collateral/model` | 1–50 | |
   | `/collateral/manufacturingYear` | integer 1900 through `today.Year()+1` | `out_of_range` |
-  | `/collateral/licensePlate` | `^[A-Za-z0-9 -]{1,15}$` | |
+  | `/collateral/licensePlate` | `^[A-Za-z0-9 -]{1,15}$` and at least one letter or digit (`"- -"` → `invalid_format`) | |
   | `/loan/amount` | whole number, > 0, multiple of 100 (`15050` and `1000.50` → `not_multiple_of_100`, `0` → `not_positive`) | |
   | `/loan/tenureMonths` | integer 3–48 (`2`, `49`, `12.5` → `out_of_range`) | |
-- [ ] T041 [P] [US2] Write contract tests in `tests/contract/submit_errors_test.go`, each validated against `api/openapi.yaml`, asserting the `type` suffix and that `loan_applications` row count is unchanged:
+- [X] T041 [P] [US2] Write contract tests in `tests/contract/submit_errors_test.go`. Validate each *response* (not the request, which is deliberately invalid) against `api/openapi.yaml`. Assert the `type` suffix and that `loan_applications` row count is unchanged:
   - (a) Quickstart #7 → 400 `validation-failed` with exactly 4 `errors` entries.
   - (b) `MARRIED` without spouse → `spouse_required`.
   - (c) `SINGLE` with spouse → `spouse_not_allowed`.
@@ -309,34 +308,35 @@ are returned together:
   - (g) Token without scope → 403 `forbidden`.
   - (h) Second application for the same `idNumber` → 409 `customer-has-open-application`.
   - (i) Different customer, plate `"b1234xyz"` matching an open `"B 1234 XYZ"` → 409 `collateral-in-use`.
-- [ ] T042 [P] [US2] Write integration tests in `tests/integration/open_application_test.go`:
+  - (j) A database outage (the pool closed before the request) → 503 `temporarily-unavailable` with a `Retry-After` header.
+- [X] T042 [P] [US2] Write integration tests in `tests/integration/open_application_test.go`:
   - (a) Launch 20 goroutines submitting via `Service.Submit` for the same `customer_id_number` with different plates: exactly 1 succeeds, 19 return `ErrCustomerHasOpenApplication`, and 1 row exists.
   - (b) The same test for one plate across 20 different customers → `ErrCollateralInUse`.
   - (c) After setting the existing row to `deleted=true, deleted_at=now()`, a new submission for that customer succeeds.
 
 ### Implementation for User Story 2
 
-- [ ] T043 [US2] Implement `internal/loanapplication/validate.go` so T040 passes:
+- [X] T043 [US2] Implement `internal/loanapplication/validate.go` so T040 passes:
   - Collect all errors without stopping early.
   - Precompile regexes as package-level `regexp.MustCompile`.
   - Field paths are JSON Pointers.
   - Messages come from the code table in `validate.go`.
-- [ ] T044 [US2] Update `internal/loanapplication/service.go`:
+- [X] T044 [US2] Update `internal/loanapplication/service.go`:
   - `Submit` calls `Validate(req, s.now().In(loc))` before opening the transaction.
   - On any error, return `&ValidationError{Errors []FieldError}` without touching the DB.
   - Define `ValidationError`, `ErrCustomerHasOpenApplication`, and `ErrCollateralInUse` in `internal/loanapplication/errors.go`.
-- [ ] T045 [US2] Update `internal/loanapplication/repository.go`:
+- [X] T045 [US2] Update `internal/loanapplication/repository.go`:
   - Map `*pgconn.PgError` with `Code == "23505"`: `ConstraintName == "uq_loan_applications_open_customer"` → `ErrCustomerHasOpenApplication`, and `"uq_loan_applications_open_collateral"` → `ErrCollateralInUse`.
   - Wrap other errors with `fmt.Errorf("create loan application: %w", err)`.
   - Make T042 pass.
-- [ ] T046 [US2] Update `internal/loanapplication/handler.go` error mapping:
+- [X] T046 [US2] Update `internal/loanapplication/handler.go` error mapping:
   - `*ValidationError` → 400 `validation-failed` with `detail: "N fields are invalid."` and `errors`.
   - `ErrCustomerHasOpenApplication` → 409 `customer-has-open-application`.
   - `ErrCollateralInUse` → 409 `collateral-in-use`.
   - The problem `detail` must never include the other application's ID or any personal data.
   - `db.IsUnavailable(err)` → 503 `temporarily-unavailable` with `Retry-After: 5`.
   - Make T041 pass.
-- [ ] T047 [US2] Add a WARN log in `internal/loanapplication/handler.go` for rejected submissions, with attributes `reason` (problem type suffix) and `fields` (list of `field:code` pairs only). Values are never logged (FR-050).
+- [X] T047 [US2] Add a WARN log in `internal/loanapplication/handler.go` for rejected submissions, with attributes `reason` (problem type suffix) and `fields` (list of `field:code` pairs only). Values are never logged (FR-050).
 
 **Checkpoint**: Quickstart scenarios 1–2 and 5–12 pass. US1 tests are still green.
 
@@ -354,25 +354,25 @@ row and identical responses.
 
 ### Tests for User Story 3 ⚠️ write first, confirm they FAIL
 
-- [ ] T048 [P] [US3] Write unit tests in `internal/loanapplication/idempotency_test.go`:
+- [X] T048 [P] [US3] Write unit tests in `internal/loanapplication/idempotency_test.go`:
   - `RequestHash(raw []byte) ([]byte, error)` returns SHA-256 of `json.Compact(raw)`, so whitespace-only differences give equal hashes and a changed value gives a different hash.
   - `ValidIdempotencyKey(k string) bool` accepts 1–255 chars matching `^[\x21-\x7E]+$` and rejects empty strings, 256 chars, and strings containing a space or non-ASCII.
-- [ ] T049 [P] [US3] Write integration tests in `tests/integration/idempotency_test.go`:
+- [X] T049 [P] [US3] Write integration tests in `tests/integration/idempotency_test.go`:
   - (a) Same actor, key, and body twice → same `SubmitResult.ID`, 1 `loan_applications` row, 1 `idempotency_keys` row with `response_status=201` and `response_body` containing only `id`, `status`, `currency`, `submittedAt`.
   - (b) Same key, different body → `ErrIdempotencyKeyReused`, still 1 row.
   - (c) The same key used by a different actor is an independent request.
   - (d) 20 goroutines with the same actor, key, and body → all 20 return the identical ID; 1 application row and 1 key row.
   - (e) A request that fails validation stores no key row, and a corrected retry with the same key succeeds.
   - (f) `expires_at = created_at + 24h`.
-- [ ] T050 [P] [US3] Write contract tests in `tests/contract/idempotency_test.go`:
+- [X] T050 [P] [US3] Write contract tests in `tests/contract/idempotency_test.go`:
   - Missing `Idempotency-Key` → 400 `invalid-idempotency-key`, and a key of 256 chars likewise.
   - A replay returns 201 with an identical body and `Location`.
   - A changed `loan.amount` under the same key → 422 `idempotency-key-reused`.
-  - All responses validate against `api/openapi.yaml`.
+  - All responses validate against `api/openapi.yaml`. Requests are validated only on the success path.
 
 ### Implementation for User Story 3
 
-- [ ] T051 [US3] Create `migrations/000002_create_idempotency_keys.up.sql` and `.down.sql`, followed by the six audit columns and the `deleted`/`deleted_at` CHECK:
+- [X] T051 [US3] Create `migrations/000002_create_idempotency_keys.up.sql` and `.down.sql`, followed by the six audit columns and the `deleted`/`deleted_at` CHECK:
   - Table `idempotency_keys`:
     - `id UUID PRIMARY KEY DEFAULT uuidv7()`
     - `actor TEXT NOT NULL`
@@ -384,20 +384,20 @@ row and identical responses.
     - `loan_application_id UUID NULL REFERENCES loan_applications(id)`
     - `expires_at TIMESTAMPTZ NOT NULL`
   - Unique index `uq_idempotency_keys_actor_key` on `(actor, idempotency_key) WHERE NOT deleted`.
-- [ ] T052 [US3] Write `internal/db/queries/idempotency_keys.sql`:
+- [X] T052 [US3] Write `internal/db/queries/idempotency_keys.sql`:
   - `InsertIdempotencyKey :one`: `INSERT ... ON CONFLICT (actor, idempotency_key) WHERE NOT deleted DO NOTHING RETURNING id`; no row means the key already exists.
   - `GetIdempotencyKey :one`: select by actor and key `WHERE NOT deleted`.
   - `CompleteIdempotencyKey :exec`: set `response_status`, `response_body`, `loan_application_id`, `updated_at = now()`, `updated_by`.
   - Then run `make sqlc`.
-- [ ] T053 [US3] Implement `internal/loanapplication/idempotency.go`: `RequestHash`, `ValidIdempotencyKey`, `ErrIdempotencyKeyReused` (in `errors.go`), and a repository method `ClaimKey`/`CompleteKey`/`GetKey` in `repository.go`. Make T048 pass.
-- [ ] T054 [US3] Update `Service.Submit` in `internal/loanapplication/service.go` to `Submit(ctx, req, rawBody []byte, key, actor string) (SubmitResult, replayed bool, error)`:
+- [X] T053 [US3] Implement `internal/loanapplication/idempotency.go`: `RequestHash`, `ValidIdempotencyKey`, `ErrIdempotencyKeyReused` (in `errors.go`), and a repository method `ClaimKey`/`CompleteKey`/`GetKey` in `repository.go`. Make T048 pass.
+- [X] T054 [US3] Update `Service.Submit` in `internal/loanapplication/service.go` to `Submit(ctx, req, rawBody []byte, key, actor string) (SubmitResult, replayed bool, error)`:
   1. Validate (US2); on failure return without touching the DB.
   2. Begin a transaction and call `ClaimKey` with `expires_at = now + 24h`.
   3. If no row is returned: roll back, `GetKey` outside the transaction, and compare `request_hash`. If equal, return the stored `response_body` as the result with `replayed=true`; otherwise return `ErrIdempotencyKeyReused`.
   4. If claimed: `repo.Create`, `CompleteKey` with status 201 and the marshaled `SubmitResult`, then commit.
 
   A concurrent duplicate blocks on the unique index until the first transaction commits, then gets no row, which leads to the replay. Make T049 pass.
-- [ ] T055 [US3] Update `internal/loanapplication/handler.go`:
+- [X] T055 [US3] Update `internal/loanapplication/handler.go`:
   - Read the raw body once (`io.ReadAll` over `http.MaxBytesReader`, 64 KiB), then decode from those bytes.
   - Validate the `Idempotency-Key` header before decoding; invalid → 400 `invalid-idempotency-key`.
   - Pass the raw body and key to `Submit`.
@@ -411,14 +411,14 @@ row and identical responses.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T056 [P] Write `tests/integration/logging_pii_test.go` (SC-006 / FR-050):
+- [X] T056 [P] Write `tests/integration/logging_pii_test.go` (SC-006 / FR-050):
   - Capture slog output into a buffer through the full handler.
   - Submit valid, invalid, and conflicting applications using fixture values.
   - Assert that none of these values appear in the logs: customer and spouse full names, ID numbers, phone numbers, email, street, zip code, birth date, incomes, license plate.
-- [ ] T057 [P] Write a load check in `tests/integration/submit_load_test.go` (build tag `integration && load`): 500 sequential plus 50-concurrent valid submissions with unique customers and plates; assert p95 latency < 300 ms and 0 errors (plan Performance Goals; SC-003)
-- [ ] T058 [P] Create `README.md`: purpose, prerequisites, environment variables (from `internal/config`), `make` targets, how to run locally (link to `specs/001-loan-submission/quickstart.md`), and the API contract location `api/openapi.yaml`
-- [ ] T059 Run `make lint vuln` and fix all findings. Verify that `grep -rnE "float(32|64)" internal/money internal/loanapplication` returns no money-related usage (Principle III).
-- [ ] T060 Execute every scenario in `specs/001-loan-submission/quickstart.md` (sections 1–4) against a locally running service and record any deviations as follow-up tasks
+- [X] T057 [P] Write a load check in `tests/integration/submit_load_test.go` (build tag `integration && load`): 500 sequential plus 50-concurrent valid submissions with unique customers and plates; assert p95 latency < 300 ms and 0 errors (plan Performance Goals; SC-003)
+- [X] T058 [P] Create `README.md`: purpose, prerequisites, the storage-level encryption-at-rest deployment requirement (research R13), environment variables (from `internal/config`), `make` targets, how to run locally (link to `specs/001-loan-submission/quickstart.md`), and the API contract location `api/openapi.yaml`
+- [X] T059 Run `make lint vuln` and fix all findings. Verify that `grep -rnE "float(32|64)" internal/money internal/loanapplication` returns no money-related usage (Principle III).
+- [X] T060 Execute every scenario in `specs/001-loan-submission/quickstart.md` (sections 1–4) against a locally running service and record any deviations as follow-up tasks
 
 ---
 
@@ -495,8 +495,8 @@ Task: "Idempotency contract tests in tests/contract/idempotency_test.go"
 ### Incremental Delivery
 
 1. **US1**: valid applications are stored, and the DB constraints block bad data.
-2. **US2**: full validation feedback and the open-application conflicts. This is the minimum before exposing the API to real clients.
-3. **US3**: safe retries. Required by constitution Principle I before production release.
+2. **US2**: full validation feedback and the open-application conflicts.
+3. **US3**: safe retries. Required by constitution Principle I; this is the first releasable increment.
 4. **Polish**: personal-data log audit, load check, docs, quickstart run.
 
 ---

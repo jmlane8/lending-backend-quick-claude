@@ -51,7 +51,8 @@ the submitted customer, collateral, and loan data.
    status `IN_PROGRESS` and responds with a success result containing the application reference,
    the status, and the submission time.
 2. **Given** a successfully submitted application, **When** the stored record is inspected,
-   **Then** it contains all submitted customer, address, collateral, and loan values unchanged,
+   **Then** it contains all submitted customer, address, collateral, and loan values as submitted
+   (after whitespace trimming and license-plate normalization),
    plus who submitted it and when.
 3. **Given** a valid application with the boundary values amount = 100, tenure = 3 months, and
    tenure = 48 months, **When** each is submitted, **Then** each is accepted.
@@ -166,7 +167,7 @@ confirm only one application exists and both responses carry the same applicatio
 - **FR-004**: System MUST store the customer, spouse (if any), collateral, and loan data of one
   application together atomically — either all are saved or none are.
 - **FR-005**: System MUST record who submitted the application and when.
-- **FR-006**: A retried submission with the same request key and identical content MUST return the
+- **FR-006**: A retried submission with the same request key (the `Idempotency-Key`) and identical content MUST return the
   original result without creating a new application; the same key with different content MUST be
   rejected as a conflict.
 - **FR-007**: System MUST reject a submission when the customer's ID number already has an
@@ -206,8 +207,8 @@ confirm only one application exists and both responses carry the same applicatio
 - **FR-021**: Model — 1 to 50 characters.
 - **FR-022**: Manufacturing year — a whole number from 1900 up to and including the next calendar
   year.
-- **FR-023**: License plate — 1 to 15 characters, letters, digits, spaces, or hyphens; stored in
-  normalized form (uppercase, without spaces or hyphens).
+- **FR-023**: License plate — 1 to 15 characters, letters, digits, spaces, or hyphens, containing
+  at least one letter or digit; stored in normalized form (uppercase, without spaces or hyphens).
 
 **Proposed loan validation** (all fields required)
 
